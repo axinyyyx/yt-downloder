@@ -1,41 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>YT Downloader</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>YouTube Downloader</title>
   <style>
-    body{font-family:Arial; max-width:600px; margin:40px auto; padding:20px;}
-    input, select, button{width:100%; margin:8px 0; padding:10px; font-size:1rem;}
-    button{background:#d63031; color:#fff; border:none; cursor:pointer;}
-    button:hover{background:#e17055;}
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 30px;
+      width: 100%;
+      max-width: 500px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    }
+    h1 { text-align: center; margin: 0 0 20px; font-size: 1.8rem; }
+    input, select, button {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+    input { background: rgba(255,255,255,0.9); color: #333; }
+    select { background: #fff; color: #333; }
+    button {
+      background: #ff4757;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover { background: #ff3742; transform: translateY(-2px); }
+    .status { margin-top: 15px; text-align: center; font-size: 0.9rem; }
   </style>
 </head>
 <body>
-  <h1>YouTube Downloader</h1>
-  <input type="text" id="url" placeholder="Paste YouTube URL" />
-  <select id="type">
-    <option value="mp4">Video (MP4)</option>
-    <option value="mp3">Audio (MP3)</option>
-  </select>
-  <button onclick="download()">Download</button>
+  <div class="container">
+    <h1>Download YouTube Video/MP3</h1>
+    <input type="text" id="url" placeholder="Paste YouTube URL here..." />
+    <select id="type">
+      <option value="mp4">Video (MP4)</option>
+      <option value="mp3">Audio (MP3)</option>
+    </select>
+    <button onclick="startDownload()">Download</button>
+    <div class="status" id="status"></div>
+  </div>
 
   <script>
-  async function download(){
-    const url = document.getElementById('url').value.trim();
-    const type = document.getElementById('type').value;
-    if(!url) return alert('Enter a URL');
-    const resp = await fetch('/api/download',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({url, type})
-    });
-    if(!resp.ok) return alert(await resp.text());
-    const blob = await resp.blob();
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = (type==='mp3'?'audio.mp3':'video.mp4');
-    a.click();
-  }
+    async function startDownload() {
+      const url = document.getElementById('url').value.trim();
+      const type = document.getElementById('type').value;
+      const status = document.getElementById('status');
+      
+      if (!url) return status.innerHTML = 'Error: URL is empty!';
+      
+      status.innerHTML = 'Downloading... Please wait...';
+      
+      try {
+        const resp = await fetch('/api/download', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, type })
+        });
+
+        if (!resp.ok) {
+          const err = await resp.text();
+          status.innerHTML = `Error: ${err}`;
+          return;
+        }
+
+        const blob = await resp.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = type === 'mp3' ? 'audio.mp3' : 'video.mp4';
+        a.click();
+        status.innerHTML = 'Download started!';
+      } catch (e) {
+        status.innerHTML = 'Error: Network issue';
+      }
+    }
   </script>
 </body>
 </html>
