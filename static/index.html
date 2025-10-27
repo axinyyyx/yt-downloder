@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>YT Downloader</title>
+  <style>
+    body{font-family:Arial; max-width:600px; margin:40px auto; padding:20px;}
+    input, select, button{width:100%; margin:8px 0; padding:10px; font-size:1rem;}
+    button{background:#d63031; color:#fff; border:none; cursor:pointer;}
+    button:hover{background:#e17055;}
+  </style>
+</head>
+<body>
+  <h1>YouTube Downloader</h1>
+  <input type="text" id="url" placeholder="Paste YouTube URL" />
+  <select id="type">
+    <option value="mp4">Video (MP4)</option>
+    <option value="mp3">Audio (MP3)</option>
+  </select>
+  <button onclick="download()">Download</button>
+
+  <script>
+  async function download(){
+    const url = document.getElementById('url').value.trim();
+    const type = document.getElementById('type').value;
+    if(!url) return alert('Enter a URL');
+    const resp = await fetch('/api/download',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({url, type})
+    });
+    if(!resp.ok) return alert(await resp.text());
+    const blob = await resp.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = (type==='mp3'?'audio.mp3':'video.mp4');
+    a.click();
+  }
+  </script>
+</body>
+</html>
