@@ -1,41 +1,35 @@
-# api/download.py
+# api/download.py  (पूरा कोड – कॉपी-पेस्ट करो)
+
 import os
 from pathlib import Path
 from flask import Flask, request, send_file, abort
-
 from yt_dlp import YoutubeDL
 
 app = Flask(__name__)
 
-# ========= FFMPEG PATH (ROOT MEIN ffmpeg file honi chahiye) =========
+# FFMPEG PATH – root में ffmpeg file होनी चाहिए
 FFMPEG_PATH = str(Path(__file__).resolve().parents[1] / "ffmpeg")
 
 if not os.path.isfile(FFMPEG_PATH):
-    raise RuntimeError(f"ffmpeg binary not found at: {FFMPEG_PATH}")
+    raise RuntimeError(f"ffmpeg not found at {FFMPEG_PATH} – add ffmpeg binary in root!")
 
-# ========= TEMP FOLDER =========
 TMP_DIR = "/tmp/yt_downloads"
 os.makedirs(TMP_DIR, exist_ok=True)
 
 def cleanup():
-    for file in Path(TMP_DIR).glob("*"):
-        try:
-            if file.is_file():
-                file.unlink()
-        except:
-            pass
+    for f in Path(TMP_DIR).glob("*"):
+        try: f.unlink()
+        except: pass
 
-def download_video(url: str, format_type: str):
+def download_yt(url: str, fmt: str):
     cleanup()
-
     ydl_opts = {
         "quiet": True,
         "no_warnings": True,
         "ffmpeg_location": FFMPEG_PATH,
         "outtmpl": os.path.join(TMP_DIR, "%(id)s.%(ext)s"),
     }
-
-    if format_type == "mp3":
+    if fmt == "mp3":
         ydl_opts.update({
             "format": "bestaudio/best",
             "postprocessors": [{
@@ -44,7 +38,7 @@ def download_video(url: str, format_type: str):
                 "preferredquality": "192",
             }],
         })
-    else:  # mp4
+    else:
         ydl_opts.update({
             "format": "bestvideo+bestaudio/best",
             "merge_output_format": "mp4",
@@ -52,48 +46,37 @@ def download_video(url: str, format_type: str):
 
     with YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
-        filename = ydl.prepare_filename(info)
+        fname = ydl.prepare_filename(info)
+        if fmt == "mp3":
+            fname = fname.rsplit(".", 1)[0] + ".mp3"
+    return Path(fname)
 
-        if format_type == "mp3":
-            filename = filename.rsplit(".", 1)[0] + ".mp3"
-
-    return Path(filename)
-
-# ========= ROUTE =========
 @app.route("/", methods=["GET", "POST"])
-def index():
+def main():
     if request.method == "GET":
-        return "YouTube Downloader API – POST {url, type: 'mp4'|'mp3'}", 200
+        return "POST {url, type: 'mp4'|'mp3'} to /api/download", 200
 
     try:
         data = request.get_json(force=True)
         url = data.get("url", "").strip()
-        fmt = data.get("type", "mp4")
-
-        if fmt not in ("mp4", "mp3"):
-            abort(400, "type must be 'mp4' or 'mp3'")
-
+        typ = data.get("type", "mp4")
+        if typ not in ("mp4", "mp3"):
+            abort(400, "type must be mp4 or mp3")
         if not url:
-            abort(400, "Missing 'url'")
+            abort(400, "url required")
 
-        file_path = download_video(url, fmt)
+        file_path = download_yt(url, typ)
 
-        response = send_file(
+        resp = send_file(
             str(file_path),
             as_attachment=True,
             download_name=file_path.name,
-            mimetype="video/mp4" if fmt == "mp4" else "audio/mpeg"
+            mimetype="video/mp4" if typ == "mp4" else "audio/mpeg"
         )
-
-        # Delete file after send
-        @response.call_on_close
-        def delete_file():
-            try:
-                file_path.unlink()
-            except:
-                pass
-
-        return response
-
+        @resp.call_on_close
+        def _(): 
+            try: file_path.unlink()
+            except: pass
+        return resp
     except Exception as e:
         return f"Error: {str(e)}", 500
