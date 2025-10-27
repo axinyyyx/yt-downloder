@@ -1,0 +1,10 @@
+# 1. प्रोजेक्ट की root में आ जाएँ
+cd /path/to/yt-downloader
+
+# 2. ffmpeg static build डाउनलोड करें
+curl -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz \
+  | tar -xJ
+
+# 3. सिर्फ ffmpeg executable को root में रखें
+mv ffmpeg-*-amd64-static/ffmpeg .
+chmod +x ffmpeg
