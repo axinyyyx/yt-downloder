@@ -8,33 +8,21 @@ from pathlib import Path
 
 app = Flask(__name__)
 
-# ------------------------------------------------------------------
-# 1. Make sure we have a static ffmpeg binary (bundled in repo)
-# ------------------------------------------------------------------
-FFMPEG_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../ffmpeg"))
+# ---- ffmpeg location -------------------------------------------------
+FFMPEG_PATH = str(Path(__file__).resolve().parents[1] / "ffmpeg")
 if not os.path.isfile(FFMPEG_PATH):
-    raise RuntimeError("ffmpeg binary missing – see README")
+    raise RuntimeError(f"ffmpeg binary missing at {FFMPEG_PATH}")
+# ---------------------------------------------------------------------
 
-# ------------------------------------------------------------------
-# 2. Temporary folder (Vercel gives /tmp)
-# ------------------------------------------------------------------
 TMP = "/tmp/yt_downloader"
 os.makedirs(TMP, exist_ok=True)
 
-# ------------------------------------------------------------------
-# 3. Helper – clean old files (avoid filling /tmp)
-# ------------------------------------------------------------------
 def cleanup():
     for f in Path(TMP).glob("*"):
         try:
-            if f.is_file():
-                f.unlink()
-        except:
-            pass
+            if f.is_file(): f.unlink()
+        except: pass
 
-# ------------------------------------------------------------------
-# 4. Core download logic
-# ------------------------------------------------------------------
 def download_yt(url: str, out_type: str):
     cleanup()
 
@@ -63,16 +51,10 @@ def download_yt(url: str, out_type: str):
     with YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
         filename = ydl.prepare_filename(info)
-
-        # after audio extraction the file name changes
         if out_type == "mp3":
             filename = filename.rsplit(".", 1)[0] + ".mp3"
-
     return Path(filename)
 
-# ------------------------------------------------------------------
-# 5. Flask route
-# ------------------------------------------------------------------
 @app.route("/", methods=["POST"])
 def download():
     try:
@@ -86,7 +68,6 @@ def download():
 
         file_path = download_yt(url, out_type)
 
-        # Stream the file back and delete it immediately
         response = send_file(
             str(file_path),
             as_attachment=True,
@@ -94,19 +75,12 @@ def download():
             mimetype="video/mp4" if out_type == "mp4" else "audio/mpeg"
         )
 
-        # Cleanup after response is sent
         @response.call_on_close
         def _cleanup():
-            try:
-                file_path.unlink()
-            except:
-                pass
+            try: file_path.unlink()
+            except: pass
 
         return response
 
     except Exception as e:
         return str(e), 500
-
-# ------------------------------------------------------------------
-# Vercel expects the handler to be `app`
-# ------------------------------------------------------------------
