@@ -2,18 +2,18 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/download.py",
+      "src": "api/index.py",
       "use": "@vercel/python",
       "config": { "maxLambdaSize": "50mb" }
     }
   ],
   "routes": [
-    { "src": "/api/download", "dest": "/api/download.py" },
+    { "src": "/api/index", "dest": "/api/index.py" },
     { "src": "/", "dest": "/static/index.html" },
     { "src": "/(.*)", "dest": "/static/$1" }
   ],
   "functions": {
-    "api/download.py": {
+    "api/index.py": {
       "memory": 1024,
       "maxDuration": 60
     }
