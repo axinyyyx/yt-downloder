@@ -1,18 +1,30 @@
-# api/download.py  (पूरा कोड – कॉपी-पेस्ट करो)
-
+# api/download.py
 import os
+import shutil
+import subprocess
 from pathlib import Path
 from flask import Flask, request, send_file, abort
 from yt_dlp import YoutubeDL
 
 app = Flask(__name__)
 
-# FFMPEG PATH – root में ffmpeg file होनी चाहिए
-FFMPEG_PATH = str(Path(__file__).resolve().parents[1] / "ffmpeg")
+# ========= Vercel पर ffmpeg install करो =========
+def ensure_ffmpeg():
+    if shutil.which("ffmpeg"):
+        return shutil.which("ffmpeg")
+    
+    print("Installing ffmpeg via apt-get...")
+    subprocess.run(["apt-get", "update", "-y"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(["apt-get", "install", "-y", "ffmpeg"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    
+    ffmpeg_path = shutil.which("ffmpeg")
+    if not ffmpeg_path:
+        raise RuntimeError("Failed to install ffmpeg")
+    return ffmpeg_path
 
-if not os.path.isfile(FFMPEG_PATH):
-    raise RuntimeError(f"ffmpeg not found at {FFMPEG_PATH} – add ffmpeg binary in root!")
+FFMPEG_PATH = ensure_ffmpeg()
 
+# ========= Temp folder =========
 TMP_DIR = "/tmp/yt_downloads"
 os.makedirs(TMP_DIR, exist_ok=True)
 
